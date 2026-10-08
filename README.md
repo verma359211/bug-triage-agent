@@ -14,3 +14,11 @@ python eval/run_sandbox_check.py
 ```
 
 The check sends three sample Jest tests through GitHub Actions three times each and prints expected versus actual classifications.
+
+## M3 investigation CLI
+
+```bash
+python -m agent.cli --repo https://github.com/OWNER/REPO.git --report "Describe the observed behavior"
+```
+
+M3 clones or updates the target under `.workdir/`, lets the model investigate with bounded read-only repository tools, and saves a hypothesis report under `runs/`. It does not generate or run reproduction tests yet.
