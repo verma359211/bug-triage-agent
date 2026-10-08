@@ -19,7 +19,10 @@ def _evidence_lines(state: AgentState) -> list[str]:
 
 def report(state: AgentState) -> dict:
     layer = state.get("layer_guess", "unknown")
-    if layer == "frontend":
+    existing_status = state.get("status", "running")
+    if existing_status not in {"", "running"}:
+        status = existing_status
+    elif layer == "frontend":
         status = "hypothesis_only_frontend"
     elif state.get("confidence") == "high":
         status = "hypothesis_only"
@@ -47,9 +50,9 @@ def report(state: AgentState) -> dict:
         f"- Status: `{status}`\n"
         f"- File: `{report_data['file']}`\n"
         f"- Confidence: `{report_data['confidence']}`\n"
+        f"- Reproduction attempts: `{report_data['attempts']}`\n"
         f"- Cause: {report_data['cause']}\n\n"
         f"## Evidence\n\n{evidence_markdown}\n"
     )
     print(f"[report] status={status}")
     return {"status": status, "report": report_data}
-

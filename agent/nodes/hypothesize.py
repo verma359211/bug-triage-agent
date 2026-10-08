@@ -2,7 +2,7 @@ import json
 
 from pydantic import BaseModel, Field
 
-from agent.llm import get_chat_model
+from agent.llm import invoke_structured
 from agent.state import AgentState
 
 
@@ -14,14 +14,14 @@ class Hypothesis(BaseModel):
 
 def hypothesize(state: AgentState) -> dict:
     print("[hypothesize] selecting the most likely root cause")
-    model = get_chat_model().with_structured_output(Hypothesis, method="json_schema")
     evidence = state.get("evidence", [])[-8:]
-    hypothesis = model.invoke(
+    hypothesis = invoke_structured(
+        Hypothesis,
         "Form one bug hypothesis using only the supplied repository evidence. Choose the exact "
         "repository-relative implementation file, not a test or documentation file. Do not propose "
         "a fix.\n\n"
         f"Bug report: {state['bug_report']}\n"
-        f"Evidence: {json.dumps(evidence)}"
+        f"Evidence: {json.dumps(evidence)}",
     )
     print(f"[hypothesize] file={hypothesis.file}")
     return {"hypothesis": hypothesis.model_dump()}

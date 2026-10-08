@@ -16,6 +16,10 @@ class AgentState(TypedDict, total=False):
     repro_test: str
     repro_attempts: int
     repro_result: dict[str, Any]
+    not_reproduced_count: int
+    infra_retries: int
+    hypothesis_mismatches: int
+    next_step: str
     status: str
     report: dict[str, Any]
 
@@ -36,7 +40,10 @@ def initial_state(repo_url: str, bug_report: str) -> AgentState:
         "repro_test": "",
         "repro_attempts": 0,
         "repro_result": {},
+        "not_reproduced_count": 0,
+        "infra_retries": 0,
+        "hypothesis_mismatches": 0,
+        "next_step": "",
         "status": "running",
         "report": {},
     }
-

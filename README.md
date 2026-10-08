@@ -21,4 +21,8 @@ The check sends three sample Jest tests through GitHub Actions three times each 
 python -m agent.cli --repo https://github.com/OWNER/REPO.git --report "Describe the observed behavior"
 ```
 
-M3 clones or updates the target under `.workdir/`, lets the model investigate with bounded read-only repository tools, and saves a hypothesis report under `runs/`. It does not generate or run reproduction tests yet.
+The agent clones or updates the target under `.workdir/`, investigates with bounded read-only repository tools, and saves its report under `runs/`.
+
+For backend reports, it writes a minimal Jest test asserting the correct behavior and sends that test to the GitHub Actions sandbox. Generated code never runs locally. Frontend reports stop after the hypothesis in V0.
+
+Every retry path is bounded: investigation has at most three rounds, invalid tests have at most three attempts, a passing reproduction returns to investigation at most twice, and infrastructure errors retry once.
