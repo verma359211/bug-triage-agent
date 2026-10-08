@@ -1,0 +1,35 @@
+[
+  {
+    "id": "coupon-stacking",
+    "report": "I applied SAVE30 and VIP30 together and checkout gave me 60% off. Our combined discount is only supposed to go up to 50%.",
+    "expected_file": "src/services/pricing.js",
+    "expected_cause_keywords": ["combined", "discount", "50", "cap"],
+    "layer": "backend",
+    "repro_expected": true
+  },
+  {
+    "id": "tax-rounding",
+    "report": "Buying one Sticker and one Enamel Pin shows tax of 16 cents, but tax on the $2.02 subtotal should round to 17 cents.",
+    "expected_file": "src/services/pricing.js",
+    "expected_cause_keywords": ["tax", "line", "subtotal", "round"],
+    "layer": "backend",
+    "repro_expected": true
+  },
+  {
+    "id": "stock-boundary",
+    "report": "The Coffee Mug has five units in stock, but checkout still accepts a cart containing six mugs.",
+    "expected_file": "src/services/stock.js",
+    "expected_cause_keywords": ["stock", "quantity", "one", "boundary"],
+    "layer": "backend",
+    "repro_expected": true
+  },
+  {
+    "id": "stale-cart-total",
+    "report": "On the cart page, removing an item removes its row but the displayed total stays at the old amount.",
+    "expected_file": "frontend/src/CartPage.jsx",
+    "expected_cause_keywords": ["total", "state", "remove", "stale"],
+    "layer": "frontend",
+    "repro_expected": false
+  }
+]
+
