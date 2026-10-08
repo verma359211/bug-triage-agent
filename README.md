@@ -59,6 +59,29 @@ cp .env.example .env
 
 Fill in `GITHUB_TOKEN` and `GROQ_API_KEY` in `.env`. `TARGET_REPO` is used by the evaluation scripts; `LLM_MODEL` selects the Groq model. The `.env` file, cloned repositories, and run reports are ignored by Git.
 
+## Run the web app
+
+The web interface presents the project as a small product named **Trace**. It includes an explainer, bug-submission workspace, real stage-by-stage logs, and a structured result view.
+
+Install and build the frontend once:
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+Start the combined API and production frontend:
+
+```bash
+python -m uvicorn agent.web:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. The server runs each investigation in an isolated Python subprocess, retains at most 200 log messages per run, limits concurrent work, and removes completed in-memory run records after one hour.
+
+For frontend development, start the API as above and run `npm run dev` inside `frontend/`. Vite proxies `/api` requests to the local API.
+
 ## Run the CLI
 
 ```bash
