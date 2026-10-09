@@ -171,7 +171,9 @@ input::placeholder, textarea::placeholder { color: #a6a9a2; }
 
 footer { max-width: 1200px; margin: 0 auto; min-height: 110px; border-top: 1px solid var(--line); padding: 28px 24px; display: flex; align-items: center; gap: 40px; color: #747871; }
 footer p { margin: 0; font-size: 11px; flex: 1; }
-footer > a:last-child { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 650; color: #545852; }
+.footer-links { display: flex; align-items: center; gap: 18px; }
+.footer-links a { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 650; color: #545852; white-space: nowrap; }
+.footer-links a:hover { color: var(--ink); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink { 50% { opacity: 0; } }
@@ -222,6 +224,7 @@ footer > a:last-child { display: flex; align-items: center; gap: 7px; font-size:
   .result-actions { flex-direction: column-reverse; }
   footer { align-items: flex-start; flex-wrap: wrap; gap: 18px; }
   footer p { order: 3; flex-basis: 100%; }
+  .footer-links { width: 100%; justify-content: space-between; }
 }
 
 @media (prefers-reduced-motion: reduce) {

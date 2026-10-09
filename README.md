@@ -2,6 +2,8 @@
 
 A CLI walking skeleton that accepts a GitHub repository and a bug report, investigates the code, identifies a likely file and root cause, and verifies backend bugs with a generated Jest test in GitHub Actions.
 
+Companion repository: [bug-triage-target-app](https://github.com/verma359211/bug-triage-target-app)
+
 Generated code is never executed on the local machine. Frontend reports stop after a source-backed hypothesis in V0.
 
 ## Architecture

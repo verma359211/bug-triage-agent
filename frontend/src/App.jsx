@@ -394,7 +394,7 @@ function Principles() {
 }
 
 function Footer() {
-  return <footer><a className="brand" href="#top"><span className="brand-mark"><span/></span><span>Trace</span></a><p>An AI bug-triage walking skeleton. Built to turn vague reports into testable evidence.</p><a href="https://github.com/verma359211/bug-triage-agent" target="_blank" rel="noreferrer"><Icon name="github" size={17}/> View source</a></footer>;
+  return <footer><a className="brand" href="#top"><span className="brand-mark"><span/></span><span>Trace</span></a><p>An AI bug-triage walking skeleton. Built to turn vague reports into testable evidence.</p><div className="footer-links"><a href="https://github.com/verma359211/bug-triage-agent" target="_blank" rel="noreferrer"><Icon name="github" size={17}/> Agent source</a><a href="https://github.com/verma359211/bug-triage-target-app" target="_blank" rel="noreferrer"><Icon name="github" size={17}/> Target app</a></div></footer>;
 }
 
 export default function App() {
