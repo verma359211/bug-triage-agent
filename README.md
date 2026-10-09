@@ -14,17 +14,20 @@ CLI
  v
 LangGraph workflow
  |
- +-- clone/update repository under .workdir/
- +-- parse report -> inspect code/history -> form hypothesis -> assess confidence
+ +-- clone/update repository + load .bug-triage/context.yaml
+ +-- LLM 1: select files + write an external-behavior reproduction
  |
- +-- frontend ----------------------------------------------> report
+ +-- frontend -> load focused source windows --------------------------+
  |
- +-- backend -> write Jest repro -> GitHub Actions sandbox -> interpret -> report
-                                      |
-                                      +-- bounded retry/reinvestigation paths
+ +-- backend -> GitHub Actions sandbox -> classify -> load focused source
+                                                                    |
+                                                                    v
+                                         LLM 2: diagnose exact lines -> report
 ```
 
-Repository investigation uses small read-only tools for search, file reads, Git log, and Git blame. The sandbox creates a temporary branch in the target repository, commits only the generated test, dispatches the target's reproduction workflow, downloads its result, classifies it, and cleans up temporary GitHub resources.
+The normal path uses two model calls. The repository map documents API contracts, stable fixtures, file responsibilities, and test conventions without exposing bug answers. File contents are loaded locally only after planning, capped at five files and 18,000 characters total, with focused line windows derived from the report. Git history is not sent to the model.
+
+The sandbox creates a temporary branch in the target repository, commits only the generated test, dispatches the target's reproduction workflow, downloads its result, classifies it, and cleans up temporary GitHub resources. Result classification, citation validation, and confidence calculation are deterministic.
 
 ## Requirements
 
@@ -98,9 +101,11 @@ The CLI prints Markdown and JSON reports and saves a JSON copy under `runs/`. Re
 
 - Repository clones stay under `.workdir/`.
 - Generated tests run only in GitHub Actions.
-- Investigation is limited to three rounds with at most six tool calls per round.
-- Invalid reproduction tests can be rewritten up to three total attempts.
-- A non-reproducing test can return to investigation at most twice.
+- The normal investigation uses two structured LLM calls.
+- Invalid, passing, or mismatched reproductions can be rewritten once.
+- Source evidence can expand once, by at most three additional requested files.
+- Selected source is limited to five files and 18,000 characters total.
+- Repository content is treated as untrusted evidence, never as instructions.
 - Infrastructure failures retry once.
 - Frontend reproduction is intentionally out of scope for V0.
 
@@ -118,7 +123,7 @@ Check the GitHub Actions sandbox with three known classifications, repeated thre
 python eval/run_sandbox_check.py
 ```
 
-Run all four end-to-end cases:
+Run all six end-to-end cases:
 
 ```bash
 python eval/run_eval.py
@@ -128,9 +133,11 @@ Cause matching requires at least 75% of a case's expected keywords in the combin
 
 | Case | File match | Cause match | Status | Seconds |
 | --- | --- | --- | --- | ---: |
-| coupon-stacking | yes | yes | `reproduced` | 85.42 |
-| tax-rounding | yes | yes | `reproduced` | 153.14 |
-| stock-boundary | yes | yes | `reproduced` | 109.39 |
-| stale-cart-total | yes | yes | `hypothesis_only_frontend` | 33.31 |
+| coupon-stacking | yes | yes | `reproduced` | 68.83 |
+| tax-rounding | yes | yes | `reproduced` | 78.41 |
+| stock-boundary | yes | yes | `reproduced` | 68.42 |
+| stale-cart-total | yes | yes | `hypothesis_only_frontend` | 33.06 |
+| sold-out-availability | yes | yes | `reproduced` | 56.64 |
+| zero-quantity-removal | yes | yes | `reproduced` | 48.58 |
 
-Overall: 4/4 file matches, 4/4 cause matches, and 4/4 expected statuses.
+Overall: 6/6 file matches, 6/6 cause matches, and 6/6 expected statuses across individually verified runs.

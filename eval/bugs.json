@@ -30,6 +30,21 @@
     "expected_cause_keywords": ["total", "state", "remove", "stale"],
     "layer": "frontend",
     "repro_expected": false
+  },
+  {
+    "id": "sold-out-availability",
+    "report": "The Canvas Tote has zero units available, but GET /products returns inStock true, so the storefront displays an enabled Add button instead of Sold out.",
+    "expected_file": "src/services/catalog.js",
+    "expected_cause_keywords": ["stock", "zero", "available", "comparison"],
+    "layer": "backend",
+    "repro_expected": true
+  },
+  {
+    "id": "zero-quantity-removal",
+    "report": "When a cart item has quantity one, pressing minus should remove it. Instead the API returns 'quantity must be a positive integer' and leaves the item in the cart.",
+    "expected_file": "src/services/cart.js",
+    "expected_cause_keywords": ["quantity", "zero", "remove", "positive"],
+    "layer": "backend",
+    "repro_expected": true
   }
 ]
-

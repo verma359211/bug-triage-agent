@@ -16,15 +16,24 @@ const examples = [
     report:
       "On the cart page, removing an item removes its row but the displayed total stays at the old amount.",
   },
+  {
+    label: "Sold-out item",
+    report:
+      "The Canvas Tote has zero units available, but GET /products returns inStock true, so the storefront displays an enabled Add button instead of Sold out.",
+  },
+  {
+    label: "Quantity removal",
+    report:
+      "When a cart item has quantity one, pressing minus should remove it. Instead the API returns 'quantity must be a positive integer' and leaves the item in the cart.",
+  },
 ];
 
 const stages = [
   { id: "repository", label: "Prepare repository", match: "[ensure_repo]" },
-  { id: "parse", label: "Understand the report", match: "[parse_report]" },
-  { id: "investigate", label: "Inspect code and history", match: "[investigate]" },
-  { id: "hypothesis", label: "Form root-cause hypothesis", match: "[hypothesize]" },
-  { id: "confidence", label: "Assess evidence", match: "[assess_confidence]" },
-  { id: "reproduce", label: "Verify in GitHub Actions", match: "[write_repro]" },
+  { id: "plan", label: "Map report to code", match: "[plan_run]" },
+  { id: "reproduce", label: "Verify in GitHub Actions", match: "[run_repro]" },
+  { id: "evidence", label: "Load focused source", match: "[load_evidence]" },
+  { id: "diagnose", label: "Identify root cause", match: "[diagnose]" },
   { id: "report", label: "Prepare triage report", match: "[report]" },
 ];
 
@@ -37,7 +46,7 @@ const processSteps = [
   {
     number: "02",
     title: "Follow the evidence",
-    text: "Searches code, reads focused files, and uses Git history to identify the most likely fault without indexing everything.",
+    text: "Uses the repository map to load only the most relevant files instead of repeatedly searching or indexing everything.",
   },
   {
     number: "03",
@@ -76,14 +85,12 @@ function Icon({ name, size = 18 }) {
 function currentActivity(logs) {
   const last = logs.at(-1) || "";
   if (last.includes("cloning or updating")) return "Cloning the repository and resolving the current commit";
-  if (last.includes("extracting symptom")) return "Reading the report and identifying the affected layer";
-  if (last.includes("search_code")) return "Searching for code connected to the reported behavior";
-  if (last.includes("read_file")) return "Reading the most relevant source file";
-  if (last.includes("selecting the most likely")) return "Connecting the evidence into a root-cause hypothesis";
-  if (last.includes("reflecting on evidence")) return "Checking whether the evidence is strong enough to proceed";
-  if (last.includes("preparing Jest")) return "Writing a minimal reproduction test";
+  if (last.includes("[plan_run]")) return "Mapping the report to contracts, files, and a reproduction";
+  if (last.includes("[load_evidence]")) return "Loading only the source files selected for diagnosis";
+  if (last.includes("[diagnose]")) return "Connecting the reproduced behavior to exact source lines";
+  if (last.includes("[repair_repro]")) return "Correcting the reproduction from its test result";
   if (last.includes("GitHub Actions")) return "Running the reproduction safely in GitHub Actions";
-  if (last.includes("failure matches")) return "Confirming that the failure supports the hypothesis";
+  if (last.includes("[assess_repro]")) return "Classifying the reproduction result";
   if (last.includes("[report]")) return "Packaging the findings into a concise report";
   if (last.includes("[start]")) return "Starting the investigation";
   return "Working through the investigation";
@@ -94,7 +101,6 @@ function stageStates(logs, status, report) {
   stages.forEach((stage, index) => {
     if (logs.some((line) => line.includes(stage.match))) activeIndex = index;
   });
-  if (logs.some((line) => line.includes("[run_repro]"))) activeIndex = 5;
   if (status === "completed") activeIndex = stages.length;
   const frontend = report?.status === "hypothesis_only_frontend" || logs.some((line) => line.includes("layer=frontend"));
 

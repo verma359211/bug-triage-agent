@@ -8,17 +8,18 @@ class AgentState(TypedDict, total=False):
     commit_sha: str
     layer_guess: str
     parsed_report: dict[str, Any]
-    evidence: list[dict[str, Any]]
+    context_document: str
+    plan: dict[str, Any]
+    file_evidence: dict[str, str]
+    diagnosis_evidence: list[dict[str, Any]]
+    requested_files: list[str]
+    evidence_rounds: int
     hypothesis: dict[str, str]
     confidence: str
-    missing_info: str
-    investigate_rounds: int
     repro_test: str
     repro_attempts: int
     repro_result: dict[str, Any]
-    not_reproduced_count: int
     infra_retries: int
-    hypothesis_mismatches: int
     next_step: str
     status: str
     report: dict[str, Any]
@@ -32,17 +33,18 @@ def initial_state(repo_url: str, bug_report: str) -> AgentState:
         "commit_sha": "",
         "layer_guess": "unknown",
         "parsed_report": {},
-        "evidence": [],
+        "context_document": "",
+        "plan": {},
+        "file_evidence": {},
+        "diagnosis_evidence": [],
+        "requested_files": [],
+        "evidence_rounds": 0,
         "hypothesis": {},
         "confidence": "low",
-        "missing_info": "",
-        "investigate_rounds": 0,
         "repro_test": "",
         "repro_attempts": 0,
         "repro_result": {},
-        "not_reproduced_count": 0,
         "infra_retries": 0,
-        "hypothesis_mismatches": 0,
         "next_step": "",
         "status": "running",
         "report": {},

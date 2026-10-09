@@ -2,19 +2,11 @@ from agent.state import AgentState
 
 
 def _evidence_lines(state: AgentState) -> list[str]:
-    hypothesis_file = state.get("hypothesis", {}).get("file", "")
-    preferred: list[str] = []
-    fallback: list[str] = []
-    for item in state.get("evidence", []):
-        if item.get("tool") not in {"search_code", "read_file"}:
-            continue
-        for line in str(item.get("output", "")).splitlines():
-            if line.count(":") < 2 or not line.split(":", 2)[1].isdigit():
-                continue
-            fallback.append(line)
-            if hypothesis_file and line.startswith(f"{hypothesis_file}:"):
-                preferred.append(line)
-    return (preferred or fallback)[:6]
+    diagnosis_evidence = state.get("diagnosis_evidence", [])
+    return [
+        f"{item['file']}:{item['line']}: {item['explanation']}"
+        for item in diagnosis_evidence
+    ][:6]
 
 
 def report(state: AgentState) -> dict:

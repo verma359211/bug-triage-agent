@@ -1,102 +1,71 @@
 import unittest
 
-from agent.graph import route_after_confidence, route_after_interpretation
-from agent.nodes.interpret_result import interpret_result
+from agent.graph import route_after_diagnosis, route_after_plan, route_after_repro
+from agent.nodes.assess_repro import assess_repro
 
 
-class ConfidenceRoutingTests(unittest.TestCase):
-    def test_low_confidence_reinvestigates_before_cap(self):
+class GraphRoutingTests(unittest.TestCase):
+    def test_frontend_skips_reproduction(self):
+        self.assertEqual(route_after_plan({"layer_guess": "frontend"}), "load_evidence")
+
+    def test_backend_runs_reproduction_first(self):
+        self.assertEqual(route_after_plan({"layer_guess": "backend"}), "run_repro")
+
+    def test_diagnosis_expands_evidence_only_once(self):
         self.assertEqual(
-            route_after_confidence(
-                {"layer_guess": "backend", "confidence": "low", "investigate_rounds": 2}
-            ),
-            "investigate",
+            route_after_diagnosis({"requested_files": ["src/more.js"], "evidence_rounds": 1}),
+            "load_evidence",
         )
-
-    def test_low_confidence_reproduces_at_investigation_cap(self):
         self.assertEqual(
-            route_after_confidence(
-                {"layer_guess": "backend", "confidence": "low", "investigate_rounds": 3}
-            ),
-            "write_repro",
-        )
-
-    def test_high_confidence_writes_reproduction(self):
-        self.assertEqual(
-            route_after_confidence(
-                {"layer_guess": "backend", "confidence": "high", "investigate_rounds": 1}
-            ),
-            "write_repro",
-        )
-
-    def test_frontend_reports_without_looping(self):
-        self.assertEqual(
-            route_after_confidence(
-                {"layer_guess": "frontend", "confidence": "low", "investigate_rounds": 1}
-            ),
+            route_after_diagnosis({"requested_files": ["src/more.js"], "evidence_rounds": 2}),
             "report",
         )
 
-    def test_interpretation_route_uses_bounded_next_step(self):
-        self.assertEqual(route_after_interpretation({"next_step": "run_repro"}), "run_repro")
-        self.assertEqual(route_after_interpretation({"next_step": "unexpected"}), "report")
+    def test_mismatched_failure_routes_to_one_repair(self):
+        self.assertEqual(
+            route_after_diagnosis(
+                {"next_step": "repair_repro", "requested_files": [], "evidence_rounds": 1}
+            ),
+            "repair_repro",
+        )
+
+    def test_unknown_repro_route_falls_back_to_evidence(self):
+        self.assertEqual(route_after_repro({"next_step": "unexpected"}), "load_evidence")
 
 
 class ReproductionRoutingTests(unittest.TestCase):
-    def test_not_reproduced_reinvestigates_before_cap(self):
-        result = interpret_result(
-            {
-                "repro_result": {"classification": "not_reproduced"},
-                "investigate_rounds": 1,
-                "not_reproduced_count": 0,
-                "repro_attempts": 1,
-            }
+    def test_reproduced_result_loads_source_evidence(self):
+        result = assess_repro(
+            {"repro_result": {"classification": "reproduced"}, "repro_attempts": 1}
         )
-        self.assertEqual(result["next_step"], "investigate")
+        self.assertEqual(result["status"], "reproduced")
+        self.assertEqual(result["next_step"], "load_evidence")
 
-    def test_not_reproduced_reports_at_round_cap(self):
-        result = interpret_result(
-            {
-                "repro_result": {"classification": "not_reproduced"},
-                "investigate_rounds": 3,
-                "not_reproduced_count": 2,
-                "repro_attempts": 3,
-            }
-        )
-        self.assertEqual(result["status"], "not_reproduced")
-        self.assertEqual(result["next_step"], "report")
-
-    def test_broken_test_is_rewritten_at_most_three_attempts(self):
-        retry = interpret_result(
-            {
-                "repro_result": {"classification": "repro_broken"},
-                "investigate_rounds": 1,
-                "repro_attempts": 2,
-            }
-        )
-        exhausted = interpret_result(
-            {
-                "repro_result": {"classification": "repro_broken"},
-                "investigate_rounds": 1,
-                "repro_attempts": 3,
-            }
-        )
-        self.assertEqual(retry["next_step"], "write_repro")
-        self.assertEqual(exhausted["status"], "repro_broken")
+    def test_broken_or_passing_test_gets_one_repair(self):
+        for classification in ("repro_broken", "not_reproduced"):
+            retry = assess_repro(
+                {"repro_result": {"classification": classification}, "repro_attempts": 1}
+            )
+            exhausted = assess_repro(
+                {"repro_result": {"classification": classification}, "repro_attempts": 2}
+            )
+            self.assertEqual(retry["next_step"], "repair_repro")
+            self.assertEqual(exhausted["next_step"], "load_evidence")
+            self.assertEqual(exhausted["status"], classification)
 
     def test_infrastructure_error_retries_once(self):
-        retry = interpret_result(
+        retry = assess_repro(
             {
                 "repro_result": {"classification": "infra_error"},
-                "infra_retries": 0,
                 "repro_attempts": 1,
+                "infra_retries": 0,
             }
         )
-        exhausted = interpret_result(
+        exhausted = assess_repro(
             {
                 "repro_result": {"classification": "infra_error"},
-                "infra_retries": 1,
                 "repro_attempts": 2,
+                "infra_retries": 1,
             }
         )
         self.assertEqual(retry["next_step"], "run_repro")

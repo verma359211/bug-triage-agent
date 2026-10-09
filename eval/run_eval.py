@@ -98,7 +98,7 @@ def main() -> int:
     print(f"\nFile matches: {file_matches}/{len(rows)}")
     print(f"Cause matches: {cause_matches_count}/{len(rows)}")
     print(f"Status matches: {status_matches}/{len(rows)}")
-    required_file_matches = 3 if len(rows) >= 4 else len(rows)
+    required_file_matches = len(rows)
     return (
         0
         if file_matches >= required_file_matches

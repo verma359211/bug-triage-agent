@@ -111,38 +111,3 @@ def read_file(
         for line_number in range(start, end + 1)
     )
     return truncate_output(output)
-
-
-def git_log(repo_path: Path, relative_path: str) -> str:
-    _safe_file(repo_path, relative_path)
-    output = _run_git(
-        repo_path,
-        "log",
-        "--oneline",
-        "--decorate",
-        "--max-count=30",
-        "--",
-        relative_path,
-    )
-    return truncate_output(output or "no history")
-
-
-def git_blame(
-    repo_path: Path,
-    relative_path: str,
-    start_line: int,
-    end_line: int,
-) -> str:
-    _safe_file(repo_path, relative_path)
-    if start_line < 1 or end_line < start_line:
-        raise ValueError("invalid blame line range")
-    output = _run_git(
-        repo_path,
-        "blame",
-        "-L",
-        f"{start_line},{end_line}",
-        "--",
-        relative_path,
-    )
-    return truncate_output(output)
-
