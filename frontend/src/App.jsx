@@ -239,8 +239,8 @@ function RunForm({ config, onRun, busy }) {
         <span className="model-pill"><span /> {config.model || "Groq model"}</span>
       </div>
       <label>
-        <span className="label-row"><span>Repository URL</span><small>Public GitHub repository</small></span>
-        <div className="input-shell"><Icon name="github" size={18}/><input type="url" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} placeholder="https://github.com/owner/repository" disabled={busy} /></div>
+        <span className="label-row"><span>Repository URL</span><small>{config.repository_locked ? "Showcase target" : "Public GitHub repository"}</small></span>
+        <div className="input-shell"><Icon name="github" size={18}/><input type="url" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} placeholder="https://github.com/owner/repository" disabled={busy || config.repository_locked} /></div>
       </label>
       <label>
         <span className="label-row"><span>Bug report</span><small>{bugReport.length} / 4,000</small></span>

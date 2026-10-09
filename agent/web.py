@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
@@ -27,6 +27,44 @@ GITHUB_REPO_PATTERN = re.compile(
 )
 MAX_ACTIVE_RUNS = 1
 RUN_TTL_SECONDS = 3_600
+DEFAULT_RATE_LIMIT = 3
+DEFAULT_RATE_WINDOW_SECONDS = 3_600
+REQUIRED_SETTINGS = ("GITHUB_TOKEN", "GROQ_API_KEY", "TARGET_REPO")
+
+
+def canonical_repo(value: str) -> str:
+    return value.strip().lower().removesuffix("/").removesuffix(".git")
+
+
+def allowed_repositories() -> set[str]:
+    configured = os.environ.get("ALLOWED_REPOS") or os.environ.get("TARGET_REPO", "")
+    return {canonical_repo(value) for value in configured.split(",") if value.strip()}
+
+
+class RateLimiter:
+    def __init__(self, limit: int, window_seconds: int) -> None:
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self._attempts: dict[str, list[float]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key: str, now: float | None = None) -> bool:
+        current = time.time() if now is None else now
+        cutoff = current - self.window_seconds
+        with self._lock:
+            recent = [value for value in self._attempts.get(key, []) if value > cutoff]
+            if len(recent) >= self.limit:
+                self._attempts[key] = recent
+                return False
+            recent.append(current)
+            self._attempts[key] = recent
+            return True
+
+
+rate_limiter = RateLimiter(
+    int(os.environ.get("RATE_LIMIT_REQUESTS", DEFAULT_RATE_LIMIT)),
+    int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", DEFAULT_RATE_WINDOW_SECONDS)),
+)
 
 
 class RunRequest(BaseModel):
@@ -130,7 +168,12 @@ store = RunStore()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    global rate_limiter
     load_dotenv(ROOT / ".env")
+    rate_limiter = RateLimiter(
+        int(os.environ.get("RATE_LIMIT_REQUESTS", DEFAULT_RATE_LIMIT)),
+        int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", DEFAULT_RATE_WINDOW_SECONDS)),
+    )
     yield
 
 
@@ -185,19 +228,36 @@ def health() -> dict:
     return {"ok": True}
 
 
+@app.get("/api/ready")
+def ready():
+    missing = [name for name in REQUIRED_SETTINGS if not os.environ.get(name)]
+    payload = {"ready": not missing, "missing": missing}
+    return JSONResponse(payload, status_code=200 if not missing else 503)
+
+
 @app.get("/api/config")
 def config() -> dict:
     load_dotenv(ROOT / ".env")
+    repositories = allowed_repositories()
     return {
         "default_repo": os.environ.get("TARGET_REPO", ""),
         "model": os.environ.get("LLM_MODEL", "Groq model"),
+        "repository_locked": bool(repositories),
     }
 
 
 @app.post("/api/runs", status_code=202)
-def create_run(request: RunRequest) -> dict:
+def create_run(payload: RunRequest, request: Request) -> dict:
+    repositories = allowed_repositories()
+    if not repositories:
+        raise HTTPException(status_code=503, detail="repository allowlist is not configured")
+    if canonical_repo(payload.repo_url) not in repositories:
+        raise HTTPException(status_code=403, detail="this showcase only accepts its target repository")
+    client = request.client.host if request.client else "unknown"
+    if not rate_limiter.allow(client):
+        raise HTTPException(status_code=429, detail="demo limit reached; try again later")
     try:
-        record = store.create(request)
+        record = store.create(payload)
     except RuntimeError as error:
         raise HTTPException(status_code=429, detail=str(error)) from error
     threading.Thread(target=_run_agent, args=(record,), daemon=True).start()

@@ -1,9 +1,10 @@
+import os
 import unittest
 from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from agent.web import RunRequest, RunStore, health
+from agent.web import RateLimiter, RunRequest, RunStore, allowed_repositories, health
 
 
 class RunRequestTests(unittest.TestCase):
@@ -50,6 +51,37 @@ class RunStoreTests(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             run_store.create(request)
+
+
+class DeploymentGuardTests(unittest.TestCase):
+    def test_normalizes_allowed_repositories(self):
+        with patch.dict(
+            os.environ,
+            {"ALLOWED_REPOS": "https://github.com/Example/Project.git/"},
+        ):
+            self.assertEqual(
+                allowed_repositories(),
+                {"https://github.com/example/project"},
+            )
+
+    def test_target_repository_is_the_default_allowlist(self):
+        with patch.dict(
+            os.environ,
+            {"TARGET_REPO": "https://github.com/example/target.git"},
+            clear=True,
+        ):
+            self.assertEqual(
+                allowed_repositories(),
+                {"https://github.com/example/target"},
+            )
+
+    def test_rate_limiter_opens_after_window(self):
+        limiter = RateLimiter(limit=2, window_seconds=10)
+
+        self.assertTrue(limiter.allow("visitor", now=1))
+        self.assertTrue(limiter.allow("visitor", now=2))
+        self.assertFalse(limiter.allow("visitor", now=3))
+        self.assertTrue(limiter.allow("visitor", now=12))
 
 
 class WebApiTests(unittest.TestCase):

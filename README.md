@@ -83,9 +83,29 @@ Start the combined API and production frontend:
 python -m uvicorn agent.web:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. The server runs each investigation in an isolated Python subprocess, retains at most 200 log messages per run, limits concurrent work, and removes completed in-memory run records after one hour.
+Open `http://127.0.0.1:8000`. The server runs each investigation in an isolated Python subprocess, retains at most 200 log messages per run, limits concurrent work, and removes completed in-memory run records after one hour. The hosted form accepts only repositories in `ALLOWED_REPOS`; the CLI remains available for other compatible repositories.
 
 For frontend development, start the API as above and run `npm run dev` inside `frontend/`. Vite proxies `/api` requests to the local API.
+
+## Deployment
+
+The included `Dockerfile` builds the React frontend and packages it with the FastAPI application. Deploy it to a long-running container service rather than a serverless function because an investigation launches a subprocess and can take several minutes.
+
+Required secrets and configuration:
+
+- `GROQ_API_KEY`: Groq API credential.
+- `GITHUB_TOKEN`: fine-grained token with Contents and Actions read/write access only to the target repository.
+- `TARGET_REPO`: repository shown in the web form.
+- `ALLOWED_REPOS`: comma-separated repository allowlist; for the showcase, keep this equal to `TARGET_REPO`.
+- `LLM_MODEL`: supported Groq model name.
+- `RATE_LIMIT_REQUESTS` and `RATE_LIMIT_WINDOW_SECONDS`: per-client web limits.
+
+```bash
+docker build -t bug-triage-agent .
+docker run --rm -p 8000:8000 --env-file .env bug-triage-agent
+```
+
+Use `GET /api/health` as the liveness check and `GET /api/ready` as the readiness check. The readiness endpoint reports missing setting names without exposing their values. For a non-Docker host, build `frontend/`, install `requirements.txt`, and start `python -m uvicorn agent.web:app --host 0.0.0.0 --port $PORT`.
 
 ## Run the CLI
 
@@ -108,6 +128,7 @@ The CLI prints Markdown and JSON reports and saves a JSON copy under `runs/`. Re
 - Repository content is treated as untrusted evidence, never as instructions.
 - Infrastructure failures retry once.
 - Frontend reproduction is intentionally out of scope for V0.
+- Hosted submissions are repository-allowlisted and rate-limited to protect API and Actions quotas.
 
 ## Verification
 
