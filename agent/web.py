@@ -241,6 +241,7 @@ def config() -> dict:
     repositories = allowed_repositories()
     return {
         "default_repo": os.environ.get("TARGET_REPO", ""),
+        "target_app_url": os.environ.get("TARGET_APP_URL", ""),
         "model": os.environ.get("LLM_MODEL", "Groq model"),
         "repository_locked": bool(repositories),
     }

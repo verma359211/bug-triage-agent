@@ -37,26 +37,21 @@ const stages = [
   { id: "report", label: "Prepare triage report", match: "[report]" },
 ];
 
-const processSteps = [
+const workflowNotes = [
   {
-    number: "01",
-    title: "Read the signal",
-    text: "Turns an unstructured bug report into a concrete symptom, expected behavior, and likely application layer.",
+    label: "Focused RAG",
+    title: "Retrieve less. Understand more.",
+    text: "The repository map and planner narrow the search to five files, then load only source windows around relevant terms.",
   },
   {
-    number: "02",
-    title: "Follow the evidence",
-    text: "Uses the repository map to load only the most relevant files instead of repeatedly searching or indexing everything.",
+    label: "Safe verification",
+    title: "Prove behavior outside the agent.",
+    text: "Generated Jest tests run on a temporary branch in GitHub Actions. Nothing generated executes on the Trace server.",
   },
   {
-    number: "03",
-    title: "Prove the hypothesis",
-    text: "For backend bugs, writes a minimal Jest reproduction and runs it in an isolated GitHub Actions workflow.",
-  },
-  {
-    number: "04",
-    title: "Return a useful report",
-    text: "Explains the file, root cause, supporting evidence, confidence, and reproduction outcome in one compact handoff.",
+    label: "Bounded autonomy",
+    title: "Agentic, with explicit limits.",
+    text: "One reproduction repair and one evidence expansion are allowed before Trace stops and reports what it can support.",
   },
 ];
 
@@ -74,6 +69,12 @@ function Icon({ name, size = 18 }) {
     clock: <><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></>,
     target: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></>,
     chevron: <path d="m9 18 6-6-6-6" />,
+    map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></>,
+    brain: <><path d="M9.5 4.5A3 3 0 0 0 4 6a3 3 0 0 0 .5 5.5A3.5 3.5 0 0 0 8 17h1.5V4.5ZM14.5 4.5A3 3 0 0 1 20 6a3 3 0 0 1-.5 5.5A3.5 3.5 0 0 1 16 17h-1.5V4.5Z"/><path d="M9.5 9H7M14.5 9H17M9.5 13H8M14.5 13H16"/></>,
+    cloud: <path d="M17.5 19H7a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 11 4 4 0 0 1 17.5 19Z"/>,
+    search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
+    external: <><path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>,
+    flask: <><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -117,6 +118,16 @@ function stageStates(logs, status, report) {
               ? "done"
               : "pending",
   }));
+}
+
+function verificationState(logs) {
+  const frontend = logs.some((line) => line.includes("layer=frontend"));
+  const reproduced = logs.some((line) => line.includes("classification=reproduced"));
+  const started = logs.some((line) => line.includes("[run_repro]") || line.includes("GitHub Actions"));
+  if (frontend) return { tone: "source", label: "Frontend path", title: "Building a source-backed hypothesis", text: "Browser execution is out of scope for V0, so Trace validates the explanation against focused source evidence." };
+  if (reproduced) return { tone: "confirmed", label: "Verification confirmed", title: "The bug was reproduced", text: "The generated test failed on the reported behavior in GitHub Actions. Trace is now connecting that failure to exact source lines." };
+  if (started) return { tone: "running", label: "Verification running", title: "Trying to reproduce the bug", text: "A minimal external-behavior test is running in the target repository's isolated GitHub Actions workflow." };
+  return { tone: "pending", label: "Verification pending", title: "Preparing a testable hypothesis", text: "Trace is mapping the report to the repository before it generates the smallest useful reproduction." };
 }
 
 function Header() {
@@ -188,18 +199,42 @@ function HowItWorks() {
   return (
     <section className="section how-section" id="how">
       <div className="section-heading">
-        <div><span className="section-label">The workflow</span><h2>Small steps. Strong evidence.</h2></div>
-        <p>The agent stays deliberately bounded: it reads only what it needs, keeps every retry finite, and separates investigation from execution.</p>
+        <div><span className="section-label">The agentic workflow</span><h2>From vague signal to verified cause.</h2></div>
+        <p>Trace plans, acts, observes, and adapts—but every branch is visible and every loop has a hard limit.</p>
       </div>
-      <div className="process-grid">
-        {processSteps.map((step) => (
-          <article className="process-card" key={step.number}>
-            <span className="process-number">{step.number}</span>
-            <h3>{step.title}</h3>
-            <p>{step.text}</p>
-            <span className="process-arrow"><Icon name="chevron" size={16}/></span>
+      <div className="workflow-shell">
+        <div className="workflow-meta"><span>2 normal LLM calls</span><span>≤ 5 source files</span><span>Bounded retries</span><span>Remote execution only</span></div>
+        <div className="workflow-track workflow-track-top">
+          <article className="workflow-node"><span><Icon name="terminal" size={19}/></span><small>Input</small><strong>Bug report</strong><p>Observed and expected behavior</p></article>
+          <span className="flow-arrow"><Icon name="arrow" size={18}/></span>
+          <article className="workflow-node"><span><Icon name="map" size={19}/></span><small>Context</small><strong>Repository map</strong><p>APIs, files, rules and fixtures</p></article>
+          <span className="flow-arrow"><Icon name="arrow" size={18}/></span>
+          <article className="workflow-node featured"><span><Icon name="brain" size={19}/></span><small>LLM call 1</small><strong>Plan investigation</strong><p>Classify, select files, write repro</p></article>
+        </div>
+        <div className="branch-label"><span>Conditional route</span></div>
+        <div className="workflow-branches">
+          <article className="branch-card backend-branch">
+            <div className="branch-heading"><span><Icon name="cloud" size={18}/></span><div><small>Backend report</small><strong>Reproduce in GitHub Actions</strong></div></div>
+            <div className="branch-steps"><span>Generate Jest test</span><Icon name="chevron" size={14}/><span>Run isolated CI</span><Icon name="chevron" size={14}/><span>Classify failure</span></div>
+            <p>A failing assertion confirms the reported behavior before diagnosis begins.</p>
           </article>
-        ))}
+          <article className="branch-card frontend-branch">
+            <div className="branch-heading"><span><Icon name="search" size={18}/></span><div><small>Frontend report</small><strong>Build a source-backed hypothesis</strong></div></div>
+            <div className="branch-steps"><span>Skip execution</span><Icon name="chevron" size={14}/><span>Load UI source</span><Icon name="chevron" size={14}/><span>Mark scope clearly</span></div>
+            <p>V0 does not claim browser reproduction; it returns a clearly labelled code-backed hypothesis.</p>
+          </article>
+        </div>
+        <div className="merge-label"><span>Evidence converges</span></div>
+        <div className="workflow-track workflow-track-bottom">
+          <article className="workflow-node"><span><Icon name="search" size={19}/></span><small>Focused RAG</small><strong>Load evidence</strong><p>Relevant source windows only</p></article>
+          <span className="flow-arrow"><Icon name="arrow" size={18}/></span>
+          <article className="workflow-node featured"><span><Icon name="brain" size={19}/></span><small>LLM call 2</small><strong>Diagnose cause</strong><p>Connect behavior to exact code</p></article>
+          <span className="flow-arrow"><Icon name="arrow" size={18}/></span>
+          <article className="workflow-node result-node"><span><Icon name="check" size={19}/></span><small>Validated output</small><strong>Evidence report</strong><p>File, lines, cause and confidence</p></article>
+        </div>
+      </div>
+      <div className="workflow-notes">
+        {workflowNotes.map((note) => <article key={note.label}><span>{note.label}</span><h3>{note.title}</h3><p>{note.text}</p></article>)}
       </div>
     </section>
   );
@@ -238,6 +273,11 @@ function RunForm({ config, onRun, busy }) {
         <div><span className="section-label">New investigation</span><h2>Describe what went wrong.</h2></div>
         <span className="model-pill"><span /> {config.model || "Groq model"}</span>
       </div>
+      {config.target_app_url && <div className="target-app-callout">
+        <span className="target-app-icon"><Icon name="external" size={20}/></span>
+        <div><small>Live showcase target</small><strong>Find a visible bug in Northstar Supply</strong><p>Open the deliberately buggy storefront, try a flow, then describe what you observe below.</p></div>
+        <a href={config.target_app_url} target="_blank" rel="noreferrer">Open target app <Icon name="external" size={15}/></a>
+      </div>}
       <label>
         <span className="label-row"><span>Repository URL</span><small>{config.repository_locked ? "Showcase target" : "Public GitHub repository"}</small></span>
         <div className="input-shell"><Icon name="github" size={18}/><input type="url" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} placeholder="https://github.com/owner/repository" disabled={busy || config.repository_locked} /></div>
@@ -262,6 +302,7 @@ function RunForm({ config, onRun, busy }) {
 function RunProgress({ run, onReset }) {
   const terminalRef = useRef(null);
   const resolvedStages = useMemo(() => stageStates(run.logs, run.status, run.report), [run]);
+  const verification = useMemo(() => verificationState(run.logs), [run.logs]);
   useEffect(() => {
     if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
   }, [run.logs]);
@@ -272,6 +313,11 @@ function RunProgress({ run, onReset }) {
         <div className={`pulse-icon ${run.status}`}><Icon name={run.status === "failed" ? "terminal" : "spark"} size={20}/></div>
         <div><span className="section-label">Live investigation</span><h2>{run.status === "failed" ? "The run stopped" : currentActivity(run.logs)}</h2></div>
         <span className={`run-status ${run.status}`}>{run.status === "running" ? <span className="spinner"/> : null}{run.status}</span>
+      </div>
+      <div className={`verification-strip ${verification.tone}`}>
+        <span className="verification-icon">{verification.tone === "confirmed" ? <Icon name="check" size={22}/> : verification.tone === "running" ? <span className="spinner"/> : <Icon name={verification.tone === "source" ? "search" : "flask"} size={21}/>}</span>
+        <div><small>{verification.label}</small><h3>{verification.title}</h3><p>{verification.text}</p></div>
+        {verification.tone === "confirmed" && <strong>Test failed as expected</strong>}
       </div>
       <div className="progress-layout">
         <ol className="stage-list">
@@ -297,6 +343,8 @@ function RunProgress({ run, onReset }) {
 
 function Result({ report, onReset }) {
   const [copied, setCopied] = useState(false);
+  const reproduced = report.status === "reproduced";
+  const frontend = report.status === "hypothesis_only_frontend";
   async function copyReport() {
     const text = `File: ${report.file}\nCause: ${report.cause}\nConfidence: ${report.confidence}\nStatus: ${report.status}`;
     await navigator.clipboard.writeText(text);
@@ -306,9 +354,14 @@ function Result({ report, onReset }) {
   return (
     <div className="result-card">
       <div className="result-topbar">
-        <div className="result-check"><Icon name="check" size={22}/></div>
-        <div><span className="section-label">Investigation complete</span><h2>Root cause identified</h2></div>
-        <span className="success-badge"><Icon name="check" size={14}/>{report.status === "reproduced" ? "Reproduced" : "Hypothesis ready"}</span>
+        <div className="result-check"><Icon name={reproduced ? "check" : "search"} size={22}/></div>
+        <div><span className="section-label">Investigation complete</span><h2>{report.file ? "Root cause identified" : "Investigation concluded"}</h2></div>
+        <span className="success-badge"><Icon name={reproduced ? "check" : "search"} size={14}/>{reproduced ? "Verified" : "Hypothesis"}</span>
+      </div>
+      <div className={`result-verdict ${reproduced ? "reproduced" : "hypothesis"}`}>
+        <span className="verdict-mark"><Icon name={reproduced ? "flask" : "search"} size={28}/></span>
+        <div><small>{reproduced ? "Reproduction status" : frontend ? "Frontend scope" : "Investigation status"}</small><h3>{reproduced ? "Bug reproduced successfully" : frontend ? "Source-backed hypothesis ready" : "Evidence-backed hypothesis ready"}</h3><p>{reproduced ? "A generated test triggered the reported failure in GitHub Actions. The diagnosis below explains the same failing behavior with validated source evidence." : "Trace found source evidence that explains the report, but did not claim an executed browser reproduction."}</p></div>
+        <span className="verdict-proof">{reproduced ? <><Icon name="check" size={15}/> Confirmed failure</> : "Execution not claimed"}</span>
       </div>
       <div className="result-grid">
         <div className="result-main">
@@ -332,7 +385,7 @@ function Result({ report, onReset }) {
 }
 
 function Workspace() {
-  const [config, setConfig] = useState({ default_repo: "", model: "" });
+  const [config, setConfig] = useState({ default_repo: "", model: "", target_app_url: "" });
   const [run, setRun] = useState(null);
 
   useEffect(() => {

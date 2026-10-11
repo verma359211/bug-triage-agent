@@ -96,6 +96,7 @@ Required secrets and configuration:
 - `GROQ_API_KEY`: Groq API credential.
 - `GITHUB_TOKEN`: fine-grained token with Contents and Actions read/write access only to the target repository.
 - `TARGET_REPO`: repository shown in the web form.
+- `TARGET_APP_URL`: deployed storefront linked from the investigation workspace.
 - `ALLOWED_REPOS`: comma-separated repository allowlist; for the showcase, keep this equal to `TARGET_REPO`.
 - `LLM_MODEL`: supported Groq model name.
 - `RATE_LIMIT_REQUESTS` and `RATE_LIMIT_WINDOW_SECONDS`: per-client web limits.

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from agent.web import RateLimiter, RunRequest, RunStore, allowed_repositories, health
+from agent.web import RateLimiter, RunRequest, RunStore, allowed_repositories, config, health
 
 
 class RunRequestTests(unittest.TestCase):
@@ -87,6 +87,10 @@ class DeploymentGuardTests(unittest.TestCase):
 class WebApiTests(unittest.TestCase):
     def test_health_payload(self):
         self.assertEqual(health(), {"ok": True})
+
+    def test_config_exposes_target_app_url(self):
+        with patch.dict(os.environ, {"TARGET_APP_URL": "https://shop.example.com"}):
+            self.assertEqual(config()["target_app_url"], "https://shop.example.com")
 
 
 if __name__ == "__main__":
